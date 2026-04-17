@@ -3,13 +3,11 @@ uvicorn[standard]
 python-dotenv
 groq
 supabase
-qdrant-client
+qdrant-client[fastembed]
+fastembed
 langchain
 langchain-community
 langchain-text-splitters
-langchain-huggingface
-sentence-transformers
-torch --index-url https://download.pytorch.org/whl/cpu
 pypdf
 pillow
 pytesseract

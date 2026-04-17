@@ -2,11 +2,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
+from fastembed import TextEmbedding
 from app.services.image_service import extract_text_from_image
 import os
 import uuid
@@ -14,12 +14,12 @@ import threading
 
 QDRANT_URL     = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-VECTOR_SIZE    = 384          # ✅ all-MiniLM-L6-v2 outputs 384 dimensions
+VECTOR_SIZE    = 384          # BAAI/bge-small-en-v1.5 outputs 384 dimensions
 COLLECTION     = "documents"
 
 _client: QdrantClient = None
 _client_lock = threading.Lock()
-_embeddings  = None
+_embeddings: TextEmbedding = None
 _embed_lock  = threading.Lock()
 
 
@@ -35,16 +35,16 @@ def get_client() -> QdrantClient:
     return _client
 
 
-def get_embeddings() -> HuggingFaceEmbeddings:
+def get_embeddings() -> TextEmbedding:
     global _embeddings
     if _embeddings is None:
         with _embed_lock:
             if _embeddings is None:
-                print("⏳ Loading embeddings model...")
-                _embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-MiniLM-L6-v2"  # ✅ ~90MB vs 420MB
+                print("⏳ Loading fastembed model...")
+                _embeddings = TextEmbedding(
+                    model_name="BAAI/bge-small-en-v1.5"  # ~50MB, no torch needed
                 )
-                print("✅ Embeddings model loaded")
+                print("✅ Fastembed model loaded")
     return _embeddings
 
 
@@ -81,12 +81,12 @@ def _upsert_chunks(chunks: list[Document], user_id: str):
     embeddings = get_embeddings()
 
     texts   = [c.page_content for c in chunks]
-    vectors = embeddings.embed_documents(texts)
+    vectors = list(embeddings.embed(texts))
 
     points = [
         PointStruct(
             id=str(uuid.uuid4()),
-            vector=vec,
+            vector=vec.tolist(),
             payload={
                 "text":    chunk.page_content,
                 "source":  chunk.metadata.get("source", "unknown"),
@@ -134,7 +134,7 @@ def query_pdf(question: str, user_id: str, k: int = 8):
     client     = get_client()
     embeddings = get_embeddings()
 
-    query_vec = embeddings.embed_query(question)
+    query_vec = list(embeddings.embed([question]))[0].tolist()
 
     results = client.query_points(
         collection_name=COLLECTION,
