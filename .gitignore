@@ -1,0 +1,13 @@
+.env
+faiss_index/
+memory_index/
+temp/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/

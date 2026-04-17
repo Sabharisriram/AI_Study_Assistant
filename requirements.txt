@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+groq
+supabase
+qdrant-client
+langchain
+langchain-community
+langchain-huggingface
+langchain-text-splitters
+sentence-transformers
+pypdf
+pillow
+pytesseract
+duckduckgo-search
+python-multipart
+httpx
