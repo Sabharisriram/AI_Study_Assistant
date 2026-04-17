@@ -10,7 +10,7 @@ import threading
 
 QDRANT_URL     = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-VECTOR_SIZE    = 768
+VECTOR_SIZE    = 384          # ✅ all-MiniLM-L6-v2 outputs 384 dimensions
 COLLECTION     = "memory"
 
 _client: QdrantClient = None
@@ -38,7 +38,7 @@ def get_embeddings() -> HuggingFaceEmbeddings:
             if _embeddings is None:
                 print("⏳ Loading memory embeddings...")
                 _embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-mpnet-base-v2"
+                    model_name="sentence-transformers/all-MiniLM-L6-v2"  # ✅ ~90MB vs 420MB
                 )
                 print("✅ Memory embeddings loaded")
     return _embeddings
@@ -53,17 +53,14 @@ def ensure_collection():
             vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
         )
         print(f"✅ Qdrant collection '{COLLECTION}' created")
-
-    # ✅ Create payload index on user_id — required for filtered search
     try:
         client.create_payload_index(
             collection_name=COLLECTION,
             field_name="user_id",
             field_schema=PayloadSchemaType.KEYWORD,
         )
-        print("✅ Payload index on 'user_id' ensured (memory)")
     except Exception:
-        pass  # Already exists — safe to ignore
+        pass
 
 
 def update_user_memory(user_id: str, role: str, content: str):
